@@ -1,0 +1,97 @@
+# Memory Management System in C
+
+This C code implements a simple memory management system for managing memory allocation and deallocation using a free list structure implemened using doubly linked list and the `mmap` function for memory mapping. The code is designed to manage two types of nodes: `main_node` and `node`, which represent main memory blocks and sub-memory blocks, respectively. The `main_node` points to a list of sub-nodes that represent allocated or free memory segments.
+
+### freelist.c
+The file was used to make the freelist data structure as given in the assignment using doubly linked lists.
+
+
+## The file contains 2 structs:
+
+# main_node 
+1. process (bool): indicates whether a node is allocated a process(1) or is a hole (0).
+2. next (node ptr) : points to the next main node
+3. sub_chain_head (node ptr) : points to the adjacent sub node, the 1st node in sub chain
+4. size (size_t) : total size of sub_chain in multiple of PAGE_SIZE.
+
+
+# node (sub node)
+1. process (bool): indicates whether a node is a process or a hole.
+2. next (node ptr) : points to the next node
+3. prev (node ptr) : points to the prev node
+4. size (size_t) : size of memory block the user requests for.
+
+
+## The code consists of various necessary functions.
+
+1. `insert_main_node(size_t bytes)`: This function creates a new `main_node` in the main chain of the freelist. It also creates a sub_node process of the size user requests for. It returns a pointer to the newly created `main_node`.
+
+2. `insertion_sub_node(struct main_node* head, size_t bytes)`: This function adds a node of the size given as a parameter, to a sub chain of the freelist It returns a pointer to the newly created sub-node.
+
+3. `join_nodes(struct node* first_node, struct node* second_node)`: This function joins two adjacent sub-nodes into a single sub-node, combining their sizes. It deallocates the memory of the second sub-node.
+
+4. `split_sub_node(size_t bytes, struct node* original_node)`: This function splits an existing sub-node into two parts. It takes the number of bytes to allocate (bytes) and the original sub-node that you want to split. The function returns a pointer to the newly created sub-node, which contains the remaining unallocated bytes.
+
+5. `display()`: This function displays the current state of the memory management system, showing the main blocks, their sizes, and the sub-nodes within each main block.
+
+
+### mems.c
+
+1. `void mems_init()`: The main head and the virtual address are initialised.
+
+2. `void* mems_malloc(size_t mem_size_req)`: If the main memory list (main_head) is empty (i.e., no memory has been allocated yet), it creates a new main memory block. It calculates the required memory page size (page) based on mem_size_req, aligns it to the next multiple of PAGE_SIZE, and inserts this new main memory block into the main memory list. I
+If the main memory list is not empty, the function searches for an appropriate memory segment within the existing main nodes. Within the sub-node loop, the function checks if a sub-node is a "hole" (sub_temp->process == 0). It evaluates the conditions for allocating memory:
+   - If the required memory size matches the size of the sub-node, it marks the sub-node as allocated (process = 1).
+   - If the required size is smaller than the sub-node, it uses the 'split_sub_node' function to split the sub-node into two parts, where one retains the required size, and the other contains the remaining unallocated memory.
+After allocating memory within a sub-node, the virtual address is updated to point to the next available memory address within the main memory block. If a suitable segment is found within a main node, the function exits the loop. If not, it advances to the next main node and continues searching. If the loop completes without finding a suitable memory segment ,the function allocates a new main memory block for the requested memory size. It calculates the required memory page size, creates a new main node with a sub-node of the specified size, inserts it into the main memory list.
+
+3. `void* mems_get(void*v_ptr)`: The function begins by checking if the main memory list (main_head) is empty. If memory has been allocated, the function initializes a temporary variable, temp_size, to the starting virtual address (starting_va). It also initializes the main_temp pointer to the first main memory block (main_head). The function enters a loop that iterates through the main memory blocks (main_temp). It checks whether the virtual address (v_ptr) falls within the address range of the current main memory block.
+It compares the virtual address with the address range of the current main memory block. If the virtual address is greater than or equal to the address range, it means the virtual address is located after the current main memory block. If the virtual address falls within the address range of the current main memory block, the function enters another loop to traverse the sub-nodes within that main block. For each sub-node, it checks whether the virtual address falls within the address range of the sub-node. If it does, the function returns the physical address of the corresponding sub-node. If the virtual address does not match any sub-node, the function advances to the next sub-node and increments temp_size by the size of the sub-node. It continues this process until a matching sub-node is found, and its physical address is returned.
+If the loop completes without finding a matching sub-node, it indicates that the virtual address was not found within the current sub chain. Once a matching sub-node is found, the function returns the physical address of that sub-node.
+
+4. `void mems_free(void *v_ptr)`: The function enters a loop that iterates through the mainnodes. It checks whether the virtual address falls within the address range of the current main nodes. It then compares the virtual address with the address range of the current main memory block . If the virtual address is greater than or equal to the address range, it means the virtual address is located after the current main memory block. In this case, it increments temp_size by the size of the current main memory block and advances to the next main memory block. If the virtual address falls within the address range of the current main memory block, the function enters another loop to traverse the sub-nodes within that main block. For each sub-node, the function checks whether the virtual address falls within the address range of the sub-node. If it does, the function proceeds to check the status of the sub-node. If the sub-node is allocated, the function checks whether the current virtual address matches the sub-node's address. If they match, it deallocates the sub-node setting the process to 0. The function further optimizes memory usage by checking if there are adjacent holes present. If either of them is free, it uses the 'join_nodes' function to merge the current sub-node with the adjacent hole. 
+
+5. `void mems_print_stats()`: It prints:
+- Total number of pages used 
+- space unused
+- main chain length 
+- sub chain length
+- the freelist structure which indicates if the nodes are process or holes
+
+6. `void mems_finish()`: This function deallocates memory from all the subnodes using the munmap function. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
